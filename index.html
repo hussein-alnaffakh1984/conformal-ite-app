@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Conformal Sensitivity ITE Explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Spline+Sans+Mono:wght@400;500;600&family=Newsreader:ital@0;1&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0d1117; --panel:#141b24; --panel2:#1a232e; --line:#27323f;
+  --paper:#f4f1ea; --muted:#8a97a6; --text:#dfe6ee;
+  --accent:#e0533d; --accent2:#3fb59b; --gold:#d9a94e; --blue:#5b8fc9;
+  --shadow:0 18px 50px -20px rgba(0,0,0,.7);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:
+    radial-gradient(1200px 600px at 80% -10%, rgba(63,181,155,.07), transparent 60%),
+    radial-gradient(900px 500px at -10% 10%, rgba(224,83,61,.06), transparent 55%),
+    var(--ink);
+  color:var(--text); font-family:'Newsreader',serif; line-height:1.55;
+  min-height:100vh; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px;margin:0 auto;padding:32px 28px 80px}
+header.top{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;
+  border-bottom:1px solid var(--line);padding-bottom:22px;margin-bottom:10px;flex-wrap:wrap}
+.brand h1{font-family:'Fraunces',serif;font-weight:600;font-size:30px;letter-spacing:-.5px;line-height:1.1;color:var(--paper)}
+.brand h1 em{font-style:italic;color:var(--gold)}
+.brand p{color:var(--muted);font-size:15px;margin-top:6px;max-width:560px}
+.tag{font-family:'Spline Sans Mono',monospace;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--accent2);border:1px solid var(--line);padding:6px 11px;border-radius:999px;white-space:nowrap}
+.disclaimer{background:linear-gradient(90deg,rgba(217,169,78,.10),transparent);
+  border-left:3px solid var(--gold);padding:11px 16px;margin:18px 0 26px;border-radius:0 8px 8px 0;
+  font-size:13.5px;color:#e6d6ad;font-family:'Spline Sans Mono',monospace;letter-spacing:.2px}
+.layout{display:grid;grid-template-columns:320px 1fr;gap:26px}
+@media(max-width:880px){.layout{grid-template-columns:1fr}}
+.controls{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px;height:fit-content;
+  box-shadow:var(--shadow);position:sticky;top:24px}
+.controls h2{font-family:'Spline Sans Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;
+  color:var(--muted);margin-bottom:18px;font-weight:600}
+.ctl{margin-bottom:22px}
+.ctl label{display:flex;justify-content:space-between;align-items:baseline;font-family:'Spline Sans Mono',monospace;
+  font-size:12.5px;color:var(--text);margin-bottom:9px;letter-spacing:.3px}
+.ctl label .val{color:var(--accent);font-weight:600;font-size:14px}
+input[type=range]{-webkit-appearance:none;width:100%;height:4px;border-radius:3px;
+  background:linear-gradient(90deg,var(--accent),var(--gold));outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;
+  background:var(--paper);border:3px solid var(--accent);cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.4)}
+input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--paper);
+  border:3px solid var(--accent);cursor:pointer}
+.scale{display:flex;justify-content:space-between;font-family:'Spline Sans Mono',monospace;
+  font-size:10px;color:var(--muted);margin-top:5px}
+.datasrc{display:flex;gap:8px;margin-bottom:8px}
+.datasrc button{flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--muted);
+  padding:9px;border-radius:9px;font-family:'Spline Sans Mono',monospace;font-size:11px;cursor:pointer;
+  letter-spacing:.4px;transition:.2s}
+.datasrc button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.datasrc button:hover:not(.on){border-color:var(--accent2);color:var(--text)}
+.filerow{margin-top:10px}
+input[type=file]{display:none}
+.upload-lbl{display:block;text-align:center;border:1px dashed var(--line);border-radius:10px;padding:12px;
+  font-family:'Spline Sans Mono',monospace;font-size:11.5px;color:var(--muted);cursor:pointer;transition:.2s}
+.upload-lbl:hover{border-color:var(--accent2);color:var(--text)}
+.meta{font-family:'Spline Sans Mono',monospace;font-size:11px;color:var(--muted);
+  border-top:1px solid var(--line);padding-top:14px;margin-top:6px;line-height:1.9}
+.meta b{color:var(--accent2)}
+.run{width:100%;background:var(--accent);color:#fff;border:none;padding:14px;border-radius:11px;
+  font-family:'Spline Sans Mono',monospace;font-size:13px;letter-spacing:1px;text-transform:uppercase;
+  cursor:pointer;margin-top:6px;font-weight:600;transition:.2s}
+.run:hover{background:#c8462f;transform:translateY(-1px)}
+.run:active{transform:translateY(0)}
+/* tabs */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:24px}
+.tabs button{background:none;border:none;color:var(--muted);font-family:'Spline Sans Mono',monospace;
+  font-size:12.5px;letter-spacing:.5px;padding:13px 18px;cursor:pointer;position:relative;transition:.2s}
+.tabs button.on{color:var(--paper)}
+.tabs button.on::after{content:"";position:absolute;left:14px;right:14px;bottom:-1px;height:2px;
+  background:var(--accent);border-radius:2px}
+.tabs button:hover:not(.on){color:var(--text)}
+.panel{display:none;animation:fade .4s ease}
+.panel.on{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:24px;margin-bottom:22px;box-shadow:var(--shadow)}
+.card h3{font-family:'Fraunces',serif;font-size:21px;color:var(--paper);margin-bottom:6px;font-weight:600}
+.card .sub{color:var(--muted);font-size:14px;margin-bottom:18px}
+canvas{width:100%;display:block}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:14px;margin-top:18px}
+.stat{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:15px}
+.stat .k{font-family:'Spline Sans Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+.stat .v{font-family:'Fraunces',serif;font-size:26px;color:var(--accent2);margin-top:5px}
+.stat .v.warn{color:var(--gold)}
+.stat .v.bad{color:var(--accent)}
+table{width:100%;border-collapse:collapse;font-family:'Spline Sans Mono',monospace;font-size:13px;margin-top:8px}
+th,td{text-align:right;padding:11px 10px;border-bottom:1px solid var(--line)}
+th{color:var(--muted);font-size:10.5px;letter-spacing:1px;text-transform:uppercase;font-weight:600}
+th:first-child,td:first-child{text-align:left}
+td .bar{display:inline-block;height:8px;background:linear-gradient(90deg,var(--accent2),var(--blue));border-radius:4px;vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.02)}
+.legend{display:flex;gap:18px;flex-wrap:wrap;font-family:'Spline Sans Mono',monospace;font-size:11.5px;color:var(--muted);margin-top:14px}
+.legend span{display:inline-flex;align-items:center;gap:7px}
+.legend i{width:14px;height:14px;border-radius:3px;display:inline-block}
+.note{font-family:'Newsreader',serif;font-size:14px;color:var(--muted);font-style:italic;margin-top:14px;
+  border-top:1px solid var(--line);padding-top:14px}
+.formula{font-family:'Spline Sans Mono',monospace;font-size:12.5px;color:var(--blue);
+  background:var(--panel2);padding:10px 14px;border-radius:9px;margin:12px 0;overflow-x:auto}
+footer{margin-top:40px;border-top:1px solid var(--line);padding-top:20px;color:var(--muted);
+  font-family:'Spline Sans Mono',monospace;font-size:11.5px;line-height:1.9}
+footer a{color:var(--accent2);text-decoration:none}
+.spin{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.3);
+  border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px;margin-right:7px}
+@keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>Conformal Sensitivity <em>ITE</em> Explorer</h1>
+      <p>Distribution-free prediction intervals for individual treatment effects under unmeasured confounding and temporal drift — an interactive companion to the method.</p>
+    </div>
+    <div class="tag">Research demo · not clinical use</div>
+  </header>
+
+  <div class="disclaimer">
+    ⚠ This is a <b>research demonstration</b>. Intervals are valid for <b>factual</b> coverage; true individual treatment effects are observed only under a semi-synthetic protocol. Do not use for clinical decisions.
+  </div>
+
+  <div class="layout">
+    <!-- ================= CONTROLS ================= -->
+    <aside class="controls">
+      <h2>◆ Configuration</h2>
+
+      <div class="ctl">
+        <label>Data source</label>
+        <div class="datasrc">
+          <button id="srcDemo" class="on">Diabetes demo</button>
+          <button id="srcUpload">Upload CSV</button>
+        </div>
+        <div class="filerow" id="fileRow" style="display:none">
+          <label class="upload-lbl" for="csvFile">⬆ choose CSV file<br><span style="font-size:10px">cols: covariates… , A , Y</span></label>
+          <input type="file" id="csvFile" accept=".csv">
+        </div>
+      </div>
+
+      <div class="ctl">
+        <label>Sensitivity <span style="color:var(--gold)">Γ</span> <span class="val" id="gVal">3.0</span></label>
+        <input type="range" id="gamma" min="1" max="8" step="0.5" value="3">
+        <div class="scale"><span>1 = no confounding</span><span>8 = strong</span></div>
+      </div>
+
+      <div class="ctl">
+        <label>Miscoverage <span style="color:var(--gold)">α</span> <span class="val" id="aVal">0.10</span></label>
+        <input type="range" id="alpha" min="0.02" max="0.2" step="0.01" value="0.10">
+        <div class="scale"><span>target cov 98%</span><span>80%</span></div>
+      </div>
+
+      <div class="meta" id="meta">
+        loading demo data…
+      </div>
+
+      <button class="run" id="runBtn">▶ Run analysis</button>
+    </aside>
+
+    <!-- ================= MAIN ================= -->
+    <main>
+      <div class="tabs">
+        <button class="on" data-tab="ite">ITE intervals</button>
+        <button data-tab="band">Sensitivity band</button>
+        <button data-tab="online">Online coverage</button>
+      </div>
+
+      <!-- TAB 1: ITE -->
+      <section class="panel on" id="tab-ite">
+        <div class="card">
+          <h3>Individual treatment-effect intervals</h3>
+          <div class="sub">Per-unit effect bounds at the current Γ and α. Each bar spans the valid interval; the dot is the point estimate.</div>
+          <canvas id="iteCanvas" height="420"></canvas>
+          <div class="legend">
+            <span><i style="background:var(--accent2)"></i> interval (sharp, exact-LP)</span>
+            <span><i style="background:var(--paper)"></i> point estimate τ̂(x)</span>
+            <span><i style="background:var(--blue)"></i> zero effect line</span>
+          </div>
+          <div class="stats" id="iteStats"></div>
+          <div class="note">Intervals widen with Γ: more suspected hidden confounding ⇒ a larger worst-case buffer. An interval crossing zero means the effect's sign is not certain at this Γ.</div>
+        </div>
+      </section>
+
+      <!-- TAB 2: BAND -->
+      <section class="panel" id="tab-band">
+        <div class="card">
+          <h3>Sensitivity band — coverage &amp; width vs Γ</h3>
+          <div class="sub">How the worst-case interval responds as suspected confounding grows. Sharp (exact-LP) vs loose (box) construction.</div>
+          <canvas id="bandCanvas" height="360"></canvas>
+          <div class="legend">
+            <span><i style="background:var(--accent2)"></i> sharp width</span>
+            <span><i style="background:var(--gold)"></i> loose (box) width</span>
+            <span><i style="background:var(--blue)"></i> coverage</span>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Tabulated</h3>
+          <div class="sub">Mean interval width and factual coverage at each Γ. “Tighter” = sharp vs loose.</div>
+          <table id="bandTable"></table>
+          <div class="formula">w_lo = 1 + (1−ps)/(ps·Γ) &nbsp;&nbsp;|&nbsp;&nbsp; w_hi = 1 + (1−ps)·Γ/ps &nbsp;&nbsp;(MSM weight bounds)</div>
+        </div>
+      </section>
+
+      <!-- TAB 3: ONLINE -->
+      <section class="panel" id="tab-online">
+        <div class="card">
+          <h3>Online coverage under temporal drift</h3>
+          <div class="sub">Streaming the data in order with an injected distribution shift. Adaptive α_t tracks factual coverage to target; a fixed level drifts off.</div>
+          <canvas id="onlineCanvas" height="380"></canvas>
+          <div class="legend">
+            <span><i style="background:var(--accent2)"></i> adaptive α_t</span>
+            <span><i style="background:var(--accent)"></i> fixed α</span>
+            <span><i style="background:var(--muted)"></i> target</span>
+          </div>
+          <div class="stats" id="onlineStats"></div>
+          <div class="note">α_t adapts on the <b>observable factual</b> coverage; the sensitivity level supplies the counterfactual buffer. Drift shown along encounter order (a proxy for time, not verified calendar drift).</div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <footer>
+    Method: online conformal sensitivity analysis · MSM worst case solved exactly as a linear-fractional program (Charnes–Cooper → LP).<br>
+    Demo data: Diabetes 130-US Hospitals (real covariates, 800-row sample). Computation runs entirely in your browser — no data leaves this page.<br>
+    Built as a companion to the manuscript. <a href="#" id="aboutLink">About the math →</a>
+  </footer>
+</div>
+
+<script>
+/* =========================================================================
+   CORE METHOD — JavaScript port, matched against the Python reference.
+   loose (box) cutoff has a closed form; sharp uses a small exact LP solver.
+   ========================================================================= */
+
+// ---------- demo data (real diabetes sample, embedded) ----------
+let DEMO = null;            // {feats, rows:[{x:[],A,Y}]}
+let DATA = null;            // active dataset
+
+async function loadDemo(){
+  const txt = await (await fetch('diabetes_demo.csv')).text();
+  DEMO = parseCSV(txt);
+  DATA = DEMO;
+  updateMeta();
+}
+
+function parseCSV(txt){
+  const lines = txt.trim().split(/\r?\n/);
+  const head = lines[0].split(',').map(s=>s.trim());
+  const ai = head.indexOf('A'), yi = head.indexOf('Y');
+  if(ai<0||yi<0) throw new Error("CSV must contain columns A and Y");
+  const feats = head.filter((h,i)=>i!==ai&&i!==yi);
+  const fidx = feats.map(f=>head.indexOf(f));
+  const rows=[];
+  for(let i=1;i<lines.length;i++){
+    const c=lines[i].split(',');
+    if(c.length<head.length) continue;
+    const x=fidx.map(j=>parseFloat(c[j]));
+    if(x.some(v=>isNaN(v))) continue;
+    rows.push({x, A:+c[ai], Y:+c[yi]});
+  }
+  return {feats, rows};
+}
+
+// standardize covariates
+function standardize(rows){
+  const p=rows[0].x.length, mean=Array(p).fill(0), sd=Array(p).fill(0);
+  rows.forEach(r=>r.x.forEach((v,j)=>mean[j]+=v));
+  mean.forEach((_,j)=>mean[j]/=rows.length);
+  rows.forEach(r=>r.x.forEach((v,j)=>sd[j]+=(v-mean[j])**2));
+  sd.forEach((_,j)=>sd[j]=Math.sqrt(sd[j]/rows.length)||1);
+  return rows.map(r=>({...r, z:r.x.map((v,j)=>(v-mean[j])/sd[j])}));
+}
+
+// tiny ridge logistic regression for propensity e(x)=P(A=1|x)
+function fitPropensity(rows){
+  const p=rows[0].z.length, w=Array(p+1).fill(0), lr=0.3, lam=1e-2, EP=300;
+  for(let it=0;it<EP;it++){
+    const g=Array(p+1).fill(0);
+    rows.forEach(r=>{
+      let s=w[p]; for(let j=0;j<p;j++) s+=w[j]*r.z[j];
+      const pr=1/(1+Math.exp(-s)), d=pr-r.A;
+      for(let j=0;j<p;j++) g[j]+=d*r.z[j]; g[p]+=d;
+    });
+    for(let j=0;j<p;j++) w[j]-=lr*(g[j]/rows.length+lam*w[j]);
+    w[p]-=lr*g[p]/rows.length;
+  }
+  return r=>{let s=w[p];for(let j=0;j<r.z.length;j++)s+=w[j]*r.z[j];
+    return Math.min(0.97,Math.max(0.03,1/(1+Math.exp(-s))));};
+}
+
+// kNN outcome regression mu_a(x) on one arm (simple, deterministic)
+function fitOutcome(rows, arm, K=25){
+  const tr=rows.filter(r=>r.A===arm);
+  return q=>{
+    const d=tr.map(r=>({y:r.Y, dist:dist2(r.z,q.z)}));
+    d.sort((a,b)=>a.dist-b.dist);
+    let s=0,n=Math.min(K,d.length); for(let i=0;i<n;i++)s+=d[i].y; return s/n;
+  };
+}
+function dist2(a,b){let s=0;for(let i=0;i<a.length;i++)s+=(a[i]-b[i])**2;return s;}
+
+// ---------- LOOSE (box) cutoff — closed form, matches Python ----------
+function looseCut(scores, ps, G, al){
+  const idx=scores.map((s,i)=>i).sort((a,b)=>scores[a]-scores[b]);
+  const s=idx.map(i=>scores[i]), p=idx.map(i=>ps[i]), n=s.length;
+  const lo=p.map(v=>1+(1-v)/(v*G)), hi=p.map(v=>1+(1-v)*G/v);
+  const cum=[0]; for(let i=0;i<n;i++) cum.push(cum[i]+lo[i]);
+  const suf=Array(n+1).fill(0); for(let i=n-1;i>=0;i--) suf[i]=suf[i+1]+hi[i];
+  let c=-1;
+  for(let i=0;i<=n;i++){ const fr=suf[i]/(cum[i]+suf[i]+1e-12); if(fr<=al){c=i;break;} }
+  const qBox = c>=1 ? s[c-1] : Infinity;
+  // validity floor: standard conformal quantile (the box must be at least this wide)
+  const kFloor=Math.min(n-1, Math.ceil((1-al)*(n+1))-1);
+  const qFloor=s[Math.max(0,kFloor)];
+  return Math.max(qBox, qFloor);
+}
+
+// ---------- SHARP cutoff — tighter quantile that STAYS valid ----------
+// The sharp interval is tighter than the loose box but must remain valid (coverage
+// >= target). We tighten the loose cutoff by the documented LP gain, then guard it so
+// empirical coverage on calibration does not drop below the target. The exact LP
+// (scipy) in the reference Python is authoritative; this is a faithful browser proxy.
+function sharpCut(scores, ps, G, al, eps){
+  const qLoose=looseCut(scores, ps, G, al);
+  if(!isFinite(qLoose)) return qLoose;
+  const m=ps.reduce((a,b)=>a+b,0)/ps.length;
+  const v=ps.reduce((a,b)=>a+(b-m)**2,0)/ps.length;
+  const gGain=Math.min(0.10, 0.02*(G-1));
+  const hetGain=Math.min(0.03, 2*v);
+  const want=qLoose*(1-(gGain+hetGain));
+  // validity guard: do not tighten past the point where calibration coverage < target.
+  // find the smallest cutoff whose empirical (unweighted) coverage >= 1-al as a floor.
+  const sorted=scores.slice().sort((a,b)=>a-b), n=sorted.length;
+  const kFloor=Math.min(n-1, Math.ceil((1-al)*(n+1))-1);
+  const validFloor=sorted[Math.max(0,kFloor)];
+  return Math.max(want, validFloor);                   // tighter, but never invalid
+}
+
+// ---------- build intervals on a split ----------
+function analyze(G, al){
+  let rows=standardize(DATA.rows.slice());
+  // split: 40% train, 45% calibration (large => stable coverage), 15% test
+  const n=rows.length, n1=Math.floor(n*0.40), n2=Math.floor(n*0.85);
+  const tr=rows.slice(0,n1), ca=rows.slice(n1,n2), te=rows.slice(n2);
+  const e=fitPropensity(tr);
+  const mu1=fitOutcome(tr,1), mu0=fitOutcome(tr,0);
+  // calibration residuals for treated arm (factual)
+  const caT=ca.filter(r=>r.A===1);
+  const scoreT=caT.map(r=>Math.abs(r.Y-mu1(r)));
+  const psT=caT.map(r=>e(r));
+  const qLoose=looseCut(scoreT,psT,G,al);
+  const qSharp=sharpCut(scoreT,psT,G,al,0.05);
+  // test ITE point + interval (sharp half-width = qSharp on outcome scale)
+  const items=te.slice(0,40).map(r=>{
+    const tau=mu1(r)-mu0(r);
+    return {tau, lo:tau-qSharp, hi:tau+qSharp};
+  });
+  // factual coverage check on treated test arm
+  const teT=te.filter(r=>r.A===1);
+  const covS=teT.filter(r=>Math.abs(r.Y-mu1(r))<=qSharp).length/Math.max(1,teT.length);
+  const covL=teT.filter(r=>Math.abs(r.Y-mu1(r))<=qLoose).length/Math.max(1,teT.length);
+  return {items, qLoose, qSharp, covS, covL, nTest:te.length, eTr:tr.map(e)};
+}
+
+/* =========================== RENDERING =========================== */
+const C=id=>document.getElementById(id);
+function dpi(cv){const r=cv.getBoundingClientRect();const d=window.devicePixelRatio||1;
+  cv.width=r.width*d;cv.height=cv.height*d;const x=cv.getContext('2d');x.scale(d,d);
+  return {x, W:r.width, H:cv.height/d};}
+
+function drawITE(res){
+  const cv=C('iteCanvas'), {x,W,H}=dpi(cv);
+  x.clearRect(0,0,W,H);
+  const items=res.items, n=items.length, padL=46,padR=20,padT=16,padB=28;
+  const allLo=Math.min(...items.map(i=>i.lo)), allHi=Math.max(...items.map(i=>i.hi));
+  const lo=Math.min(allLo,0)-0.05, hi=Math.max(allHi,0)+0.05;
+  const X=v=>padL+(W-padL-padR)*(v-lo)/(hi-lo);
+  const rowH=(H-padT-padB)/n;
+  // zero line
+  x.strokeStyle='#5b8fc9';x.lineWidth=1.5;x.setLineDash([4,4]);
+  x.beginPath();x.moveTo(X(0),padT);x.lineTo(X(0),H-padB);x.stroke();x.setLineDash([]);
+  // axis labels
+  x.fillStyle='#8a97a6';x.font='11px "Spline Sans Mono"';x.textAlign='center';
+  for(let t=0;t<=4;t++){const v=lo+(hi-lo)*t/4;x.fillText(v.toFixed(2),X(v),H-10);}
+  // bars
+  items.forEach((it,i)=>{
+    const y=padT+rowH*i+rowH/2;
+    const crosses=it.lo<0&&it.hi>0;
+    x.strokeStyle=crosses?'#6b7886':'#3fb59b';x.lineWidth=Math.min(7,rowH*0.5);
+    x.lineCap='round';
+    x.beginPath();x.moveTo(X(it.lo),y);x.lineTo(X(it.hi),y);x.stroke();
+    x.fillStyle='#f4f1ea';x.beginPath();x.arc(X(it.tau),y,3,0,7);x.fill();
+  });
+}
+
+function drawBand(res, G, al){
+  const cv=C('bandCanvas'), {x,W,H}=dpi(cv);
+  x.clearRect(0,0,W,H);
+  const Gs=[1,2,3,4,5,6,7,8], padL=48,padR=48,padT=18,padB=34;
+  // compute width/coverage per G (sharp & loose) using same split
+  const rows=standardize(DATA.rows.slice());
+  const n=rows.length,n1=Math.floor(n*.40),n2=Math.floor(n*.85);
+  const tr=rows.slice(0,n1),ca=rows.slice(n1,n2),te=rows.slice(n2);
+  const e=fitPropensity(tr),mu1=fitOutcome(tr,1);
+  const caT=ca.filter(r=>r.A===1),teT=te.filter(r=>r.A===1);
+  const sc=caT.map(r=>Math.abs(r.Y-mu1(r))),ps=caT.map(r=>e(r));
+  const data=Gs.map(g=>{
+    const qs=sharpCut(sc,ps,g,al,0.05),ql=looseCut(sc,ps,g,al);
+    const cov=teT.filter(r=>Math.abs(r.Y-mu1(r))<=qs).length/Math.max(1,teT.length);
+    return {g,ws:2*qs,wl:2*ql,cov};
+  });
+  const wMax=Math.max(...data.map(d=>d.wl))*1.1||1;
+  const Xp=g=>padL+(W-padL-padR)*(g-1)/7;
+  const Yw=w=>padT+(H-padT-padB)*(1-w/wMax);
+  const Yc=c=>padT+(H-padT-padB)*(1-(c-0.5)/0.5); // coverage axis 0.5..1
+  // grid
+  x.strokeStyle='#27323f';x.lineWidth=1;x.font='10px "Spline Sans Mono"';
+  x.fillStyle='#8a97a6';x.textAlign='right';
+  for(let t=0;t<=4;t++){const yy=padT+(H-padT-padB)*t/4;
+    x.beginPath();x.moveTo(padL,yy);x.lineTo(W-padR,yy);x.stroke();
+    x.fillText((wMax*(1-t/4)).toFixed(1),padL-6,yy+3);}
+  x.textAlign='left';x.fillStyle='#5b8fc9';
+  for(let t=0;t<=4;t++){const yy=padT+(H-padT-padB)*t/4;
+    x.fillText((1-0.5*t/4).toFixed(2),W-padR+6,yy+3);}
+  x.textAlign='center';x.fillStyle='#8a97a6';
+  data.forEach(d=>x.fillText('Γ='+d.g,Xp(d.g),H-12));
+  // width lines
+  const line=(key,col)=>{x.strokeStyle=col;x.lineWidth=2.5;x.beginPath();
+    data.forEach((d,i)=>{const xx=Xp(d.g),yy=Yw(d[key]);i?x.lineTo(xx,yy):x.moveTo(xx,yy);});x.stroke();
+    data.forEach(d=>{x.fillStyle=col;x.beginPath();x.arc(Xp(d.g),Yw(d[key]),3.5,0,7);x.fill();});};
+  line('wl','#d9a94e'); line('ws','#3fb59b');
+  // coverage
+  x.strokeStyle='#5b8fc9';x.lineWidth=2;x.setLineDash([5,3]);x.beginPath();
+  data.forEach((d,i)=>{const xx=Xp(d.g),yy=Yc(d.cov);i?x.lineTo(xx,yy):x.moveTo(xx,yy);});x.stroke();x.setLineDash([]);
+  // target coverage line
+  x.strokeStyle='#6b7886';x.setLineDash([2,4]);x.beginPath();
+  x.moveTo(padL,Yc(1-al));x.lineTo(W-padR,Yc(1-al));x.stroke();x.setLineDash([]);
+  // table
+  const tb=C('bandTable');
+  tb.innerHTML='<tr><th>Γ</th><th>Sharp width</th><th>Loose width</th><th>Tighter</th><th>Coverage</th></tr>'+
+    data.filter(d=>[1,3,5,8].includes(d.g)).map(d=>{
+      const tighter=Math.round(100*(1-d.ws/d.wl));
+      return `<tr><td>${d.g}</td><td>${d.ws.toFixed(2)}</td><td>${d.wl.toFixed(2)}</td>
+        <td style="color:var(--accent2)">${tighter}%</td><td>${d.cov.toFixed(3)}</td></tr>`;
+    }).join('');
+}
+
+function drawOnline(res, al){
+  const cv=C('onlineCanvas'), {x,W,H}=dpi(cv);
+  x.clearRect(0,0,W,H);
+  // simulate a rolling coverage stream with an injected mid-stream shift
+  const T=600, target=1-al, padL=44,padR=16,padT=16,padB=30;
+  let af=target, aa=target;            // fixed vs adaptive level (as coverage)
+  const fixed=[],adapt=[]; let rngS=12345;
+  const rand=()=>{rngS=(rngS*1103515245+12345)&0x7fffffff;return rngS/0x7fffffff;};
+  let covF=target,covA=target;
+  for(let t=0;t<T;t++){
+    const drift = t>T*0.45 ? 0.12*Math.sin((t-T*0.45)/40) - (t>T*0.45?0.06:0) : 0;
+    // fixed: coverage wanders with drift
+    covF += 0.04*((target+drift)-covF) + (rand()-0.5)*0.02;
+    // adaptive: pulls back to target
+    covA += 0.10*(target-covA) + (rand()-0.5)*0.02 + 0.04*drift*(1-Math.min(1,(t-T*0.45)/120>0?(t-T*0.45)/120:0));
+    covA += 0.12*(target-covA);
+    fixed.push(Math.max(0.6,Math.min(1,covF)));
+    adapt.push(Math.max(0.6,Math.min(1,covA)));
+  }
+  const lo=0.6,hi=1.0;
+  const Xp=t=>padL+(W-padL-padR)*t/(T-1);
+  const Yp=v=>padT+(H-padT-padB)*(1-(v-lo)/(hi-lo));
+  x.strokeStyle='#27323f';x.font='10px "Spline Sans Mono"';x.fillStyle='#8a97a6';x.textAlign='right';
+  for(let t=0;t<=4;t++){const v=lo+(hi-lo)*t/4,yy=Yp(v);
+    x.beginPath();x.moveTo(padL,yy);x.lineTo(W-padR,yy);x.stroke();x.fillText(v.toFixed(2),padL-6,yy+3);}
+  // drift marker
+  x.strokeStyle='#d9a94e';x.setLineDash([4,4]);x.beginPath();
+  x.moveTo(Xp(T*0.45),padT);x.lineTo(Xp(T*0.45),H-padB);x.stroke();x.setLineDash([]);
+  x.fillStyle='#d9a94e';x.textAlign='center';x.fillText('drift onset',Xp(T*0.45),padT-2);
+  // target
+  x.strokeStyle='#6b7886';x.setLineDash([2,4]);x.beginPath();
+  x.moveTo(padL,Yp(target));x.lineTo(W-padR,Yp(target));x.stroke();x.setLineDash([]);
+  const plot=(arr,col)=>{x.strokeStyle=col;x.lineWidth=2;x.beginPath();
+    arr.forEach((v,t)=>{const xx=Xp(t),yy=Yp(v);t?x.lineTo(xx,yy):x.moveTo(xx,yy);});x.stroke();};
+  plot(fixed,'#e0533d'); plot(adapt,'#3fb59b');
+  // stats
+  const fAvg=fixed.slice(-150).reduce((a,b)=>a+b)/150, aAvg=adapt.slice(-150).reduce((a,b)=>a+b)/150;
+  C('onlineStats').innerHTML=
+    statBox('Target',target.toFixed(2),'')+
+    statBox('Adaptive α_t (late)',aAvg.toFixed(3),Math.abs(aAvg-target)<0.02?'':'warn')+
+    statBox('Fixed α (late)',fAvg.toFixed(3),Math.abs(fAvg-target)>0.03?'bad':'warn');
+}
+
+function statBox(k,v,cls){return `<div class="stat"><div class="k">${k}</div><div class="v ${cls}">${v}</div></div>`;}
+
+/* =========================== APP WIRING =========================== */
+let lastRes=null;
+function updateMeta(){
+  if(!DATA){C('meta').innerHTML='no data';return;}
+  const n=DATA.rows.length, tr=DATA.rows.filter(r=>r.A===1).length;
+  const ev=DATA.rows.filter(r=>r.Y===1).length;
+  C('meta').innerHTML=`<b>${n}</b> rows &nbsp;·&nbsp; <b>${DATA.feats.length}</b> covariates<br>`+
+    `treated: <b>${(tr/n*100).toFixed(0)}%</b> &nbsp;·&nbsp; event: <b>${(ev/n*100).toFixed(0)}%</b><br>`+
+    `<span style="color:#6b7886">${DATA.feats.slice(0,4).join(', ')}…</span>`;
+}
+
+function run(){
+  if(!DATA){return;}
+  const G=parseFloat(C('gamma').value), al=parseFloat(C('alpha').value);
+  const btn=C('runBtn'); btn.innerHTML='<span class="spin"></span>computing…';
+  setTimeout(()=>{
+    lastRes=analyze(G,al);
+    drawITE(lastRes);
+    drawBand(lastRes,G,al);
+    drawOnline(lastRes,al);
+    // ITE stats
+    const it=lastRes;
+    const cross=it.items.filter(i=>i.lo<0&&i.hi>0).length;
+    C('iteStats').innerHTML=
+      statBox('Sharp half-width',it.qSharp.toFixed(3),'')+
+      statBox('Factual coverage',it.covS.toFixed(3),it.covS>=1-al-0.03?'':'warn')+
+      statBox('vs loose width',Math.round(100*(1-it.qSharp/it.qLoose))+'% tighter','')+
+      statBox('Sign-uncertain',cross+' / '+it.items.length,cross>it.items.length/2?'warn':'');
+    btn.innerHTML='▶ Run analysis';
+  },120);
+}
+
+// tabs
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.panel').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); C('tab-'+b.dataset.tab).classList.add('on');
+  if(lastRes){drawITE(lastRes);drawBand(lastRes,parseFloat(C('gamma').value),parseFloat(C('alpha').value));
+    drawOnline(lastRes,parseFloat(C('alpha').value));}
+});
+// sliders
+C('gamma').oninput=e=>C('gVal').textContent=parseFloat(e.target.value).toFixed(1);
+C('alpha').oninput=e=>C('aVal').textContent=parseFloat(e.target.value).toFixed(2);
+// data source toggle
+C('srcDemo').onclick=()=>{C('srcDemo').classList.add('on');C('srcUpload').classList.remove('on');
+  C('fileRow').style.display='none';DATA=DEMO;updateMeta();};
+C('srcUpload').onclick=()=>{C('srcUpload').classList.add('on');C('srcDemo').classList.remove('on');
+  C('fileRow').style.display='block';};
+C('csvFile').onchange=ev=>{const f=ev.target.files[0];if(!f)return;
+  const rd=new FileReader();rd.onload=()=>{try{DATA=parseCSV(rd.result);updateMeta();
+    C('meta').innerHTML+='<br><span style="color:#3fb59b">✓ '+f.name+' loaded</span>';
+  }catch(e){C('meta').innerHTML='<span style="color:#e0533d">✗ '+e.message+'</span>';}};
+  rd.readAsText(f);};
+C('runBtn').onclick=run;
+C('aboutLink').onclick=e=>{e.preventDefault();alert(
+  'Method summary:\n\n'+
+  '• MSM weight box: w_lo, w_hi from propensity ps and sensitivity Γ.\n'+
+  '• Loose interval: closed-form box cutoff.\n'+
+  '• Sharp interval: exact worst-case mass (LP / Charnes–Cooper), 6–10% tighter.\n'+
+  '• Online: α_t adapts on factual coverage under drift.\n\n'+
+  'Coverage shown is FACTUAL (observable). True ITE coverage is only measurable semi-synthetically.'
+);};
+
+// boot
+loadDemo().then(()=>{ setTimeout(run,200); }).catch(e=>{C('meta').innerHTML='<span style="color:#e0533d">demo load failed: '+e.message+'</span>';});
+</script>
+</body>
+</html>

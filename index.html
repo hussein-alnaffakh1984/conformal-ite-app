@@ -112,26 +112,26 @@ footer a{color:var(--accent2);text-decoration:none}
   border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px;margin-right:7px}
 @keyframes sp{to{transform:rotate(360deg)}}
 </style>
+<script src="cssa.js"></script>
+<script src="online_results.js"></script>
 </head>
 <body>
 <div class="wrap">
   <header class="top">
     <div class="brand">
       <h1>Conformal Sensitivity <em>ITE</em> Explorer</h1>
-      <p>Distribution-free prediction intervals for individual treatment effects under unmeasured confounding and temporal drift — an interactive companion to the method.</p>
+      <p>Prediction intervals for individual treatment effects under unmeasured confounding (marginal sensitivity model), with the moment-constrained worst case of the accompanying paper.</p>
     </div>
     <div class="tag">Research demo · not clinical use</div>
   </header>
 
   <div class="disclaimer">
-    ⚠ This is a <b>research demonstration</b>. Intervals are valid for <b>factual</b> coverage; true individual treatment effects are observed only under a semi-synthetic protocol. Do not use for clinical decisions.
+    ⚠ Research demonstration. With your own data, coverage of an individual's <b>counterfactual</b> outcome cannot be checked; the "factual coverage" shown is coverage of observed outcomes in the treated test units. Do not use for clinical decisions.
   </div>
 
   <div class="layout">
-    <!-- ================= CONTROLS ================= -->
     <aside class="controls">
       <h2>◆ Configuration</h2>
-
       <div class="ctl">
         <label>Data source</label>
         <div class="datasrc">
@@ -139,428 +139,276 @@ footer a{color:var(--accent2);text-decoration:none}
           <button id="srcUpload">Upload CSV</button>
         </div>
         <div class="filerow" id="fileRow" style="display:none">
-          <label class="upload-lbl" for="csvFile">⬆ choose CSV file<br><span style="font-size:10px">cols: covariates… , A , Y</span></label>
+          <label class="upload-lbl" for="csvFile">⬆ choose CSV file<br><span style="font-size:10px">columns: covariates… , A (0/1), Y (numeric)</span></label>
           <input type="file" id="csvFile" accept=".csv">
         </div>
       </div>
-
       <div class="ctl">
         <label>Sensitivity <span style="color:var(--gold)">Γ</span> <span class="val" id="gVal">3.0</span></label>
         <input type="range" id="gamma" min="1" max="8" step="0.5" value="3">
-        <div class="scale"><span>1 = no confounding</span><span>8 = strong</span></div>
+        <div class="scale"><span>1 = no hidden confounding</span><span>8 = strong</span></div>
       </div>
-
       <div class="ctl">
         <label>Miscoverage <span style="color:var(--gold)">α</span> <span class="val" id="aVal">0.10</span></label>
         <input type="range" id="alpha" min="0.02" max="0.2" step="0.01" value="0.10">
-        <div class="scale"><span>target cov 98%</span><span>80%</span></div>
+        <div class="scale"><span>target 98%</span><span>80%</span></div>
       </div>
-
-      <div class="meta" id="meta">
-        loading demo data…
-      </div>
-
+      <div class="meta" id="meta">loading demo data…</div>
       <button class="run" id="runBtn">▶ Run analysis</button>
     </aside>
 
-    <!-- ================= MAIN ================= -->
     <main>
       <div class="tabs">
         <button class="on" data-tab="ite">ITE intervals</button>
-        <button data-tab="band">Sensitivity band</button>
-        <button data-tab="online">Online coverage</button>
+        <button data-tab="band">Box vs moment-constrained</button>
+        <button data-tab="online">Online results (paper)</button>
       </div>
 
-      <!-- TAB 1: ITE -->
       <section class="panel on" id="tab-ite">
         <div class="card">
           <h3>Individual treatment-effect intervals</h3>
-          <div class="sub">Per-unit effect bounds at the current Γ and α. Each bar spans the valid interval; the dot is the point estimate.</div>
+          <div class="sub">First 40 test units. Each bar is the two-arm ITE interval (each arm at α/2), moment-constrained worst case; the dot is the point estimate μ̂₁(x) − μ̂₀(x).</div>
           <canvas id="iteCanvas" height="420"></canvas>
           <div class="legend">
-            <span><i style="background:var(--accent2)"></i> interval (sharp, exact-LP)</span>
-            <span><i style="background:var(--paper)"></i> point estimate τ̂(x)</span>
-            <span><i style="background:var(--blue)"></i> zero effect line</span>
+            <span><i style="background:var(--accent2)"></i> interval excludes 0</span>
+            <span><i style="background:#6b7886"></i> interval contains 0</span>
+            <span><i style="background:var(--paper)"></i> point estimate</span>
+            <span><i style="background:var(--blue)"></i> zero effect</span>
           </div>
           <div class="stats" id="iteStats"></div>
-          <div class="note">Intervals widen with Γ: more suspected hidden confounding ⇒ a larger worst-case buffer. An interval crossing zero means the effect's sign is not certain at this Γ.</div>
+          <div class="note">Intervals widen with Γ: a larger Γ allows stronger hidden confounding, so the worst-case weights move further from 1/e(x). An interval containing 0 means the sign of the effect is not established at this Γ.</div>
         </div>
       </section>
 
-      <!-- TAB 2: BAND -->
       <section class="panel" id="tab-band">
         <div class="card">
-          <h3>Sensitivity band — coverage &amp; width vs Γ</h3>
-          <div class="sub">How the worst-case interval responds as suspected confounding grows. Sharp (exact-LP) vs loose (box) construction.</div>
+          <h3>MSM box vs moment-constrained worst case</h3>
+          <div class="sub">Arm-1 cutoff for Γ = 1 … 8 on the current data. The moment constraint is the only difference between the two methods. The demo outcome (30-day readmission) is binary, so scores take few distinct values and widths move in steps; the gain here is small and irregular. The paper's continuous-outcome experiments give the comparison at matched guarantees.</div>
           <canvas id="bandCanvas" height="360"></canvas>
           <div class="legend">
-            <span><i style="background:var(--accent2)"></i> sharp width</span>
-            <span><i style="background:var(--gold)"></i> loose (box) width</span>
-            <span><i style="background:var(--blue)"></i> coverage</span>
+            <span><i style="background:var(--accent2)"></i> moment-constrained width</span>
+            <span><i style="background:var(--gold)"></i> box width</span>
+            <span><i style="background:var(--blue)"></i> factual coverage (moment-constrained)</span>
           </div>
         </div>
         <div class="card">
           <h3>Tabulated</h3>
-          <div class="sub">Mean interval width and factual coverage at each Γ. “Tighter” = sharp vs loose.</div>
+          <div class="sub">Mean interval width over the treated test units and their factual coverage. "Narrower" compares the two widths.</div>
           <table id="bandTable"></table>
-          <div class="formula">w_lo = 1 + (1−ps)/(ps·Γ) &nbsp;&nbsp;|&nbsp;&nbsp; w_hi = 1 + (1−ps)·Γ/ps &nbsp;&nbsp;(MSM weight bounds)</div>
+          <div class="formula">l(x) = 1 + (1−e)/(e·Γ) &nbsp;|&nbsp; h(x) = 1 + (1−e)·Γ/e &nbsp;|&nbsp; moment band: |(1/n)Σ e_i w_i − 1| ≤ ε (Bernstein radius, δ = 0.001; cutoff level α − δ, so both methods guarantee 1 − α)</div>
         </div>
       </section>
 
-      <!-- TAB 3: ONLINE -->
       <section class="panel" id="tab-online">
         <div class="card">
-          <h3>Online coverage under temporal drift</h3>
-          <div class="sub">Streaming the data in order with an injected distribution shift. Adaptive α_t tracks factual coverage to target; a fixed level drifts off.</div>
-          <canvas id="onlineCanvas" height="380"></canvas>
+          <h3>Online monitoring: results from the paper</h3>
+          <div class="sub">Not computed in your browser. One representative run of the paper's semi-synthetic stream (real covariates, simulated confounding with Γ* = 3); the numbers below each design are 20-run means.</div>
+          <div class="datasrc" id="scnBtns" style="margin:4px 0 14px"></div>
+          <canvas id="onlineF" height="210"></canvas>
+          <canvas id="onlineC" height="210" style="margin-top:10px"></canvas>
           <div class="legend">
-            <span><i style="background:var(--accent2)"></i> adaptive α_t</span>
-            <span><i style="background:var(--accent)"></i> fixed α</span>
-            <span><i style="background:var(--muted)"></i> target</span>
+            <span><i style="background:#8a97a6"></i> fixed level (hidden under clipped ACI without drift)</span>
+            <span><i style="background:#e0533d"></i> unclipped ACI (erodes the buffer)</span>
+            <span><i style="background:#d9a94e"></i> standard ACI, Γ = 1</span>
+            <span><i style="background:#3fb59b"></i> clipped ACI (paper)</span>
           </div>
           <div class="stats" id="onlineStats"></div>
-          <div class="note">α_t adapts on the <b>observable factual</b> coverage; the sensitivity level supplies the counterfactual buffer. Drift shown along encounter order (a proxy for time, not verified calendar drift).</div>
+          <div class="note">Top: factual coverage (treated units, observable). Bottom: counterfactual coverage (control units, observable only in simulation). Adapting the level on factual errors without clipping pulls factual coverage to 0.90 and removes the counterfactual buffer; clipping keeps it. After the mean shift, factual coverage stays high, so no factual-error rule reacts while counterfactual coverage falls.</div>
         </div>
       </section>
     </main>
   </div>
 
   <footer>
-    Method: online conformal sensitivity analysis · MSM worst case solved exactly as a linear-fractional program (Charnes–Cooper → LP).<br>
-    Demo data: Diabetes 130-US Hospitals (real covariates, 800-row sample). Computation runs entirely in your browser — no data leaves this page.<br>
-    Built as a companion to the manuscript. <a href="#" id="aboutLink">About the math →</a>
+    Method: MSM box plus a moment constraint implied by the nominal propensity; exact worst case by a greedy rule (checked against the Charnes–Cooper LP). Same algorithm as the paper's Python code.<br>
+    Simplifications in this demo: k-nearest-neighbour outcome model and a logistic propensity fitted to the recorded treatment on 50% of the rows, used without the error margin the theory requires (so intervals are illustrative); single split; no grid rounding of the test weight.<br>
+    Demo data: Diabetes 130-US Hospitals (real covariates and recorded outcome (30-day readmission), 5,000-row random sample). Everything runs in your browser; no data leave this page.
   </footer>
 </div>
 
 <script>
-/* =========================================================================
-   CORE METHOD — JavaScript port, matched against the Python reference.
-   loose (box) cutoff has a closed form; sharp uses a small exact LP solver.
-   ========================================================================= */
+let DEMO = null, DATA = null, LAST = null;
+const C = id => document.getElementById(id);
 
-// ---------- demo data (real diabetes sample, embedded) ----------
-let DEMO = null;            // {feats, rows:[{x:[],A,Y}]}
-let DATA = null;            // active dataset
-
-async function loadDemo(){
-  const txt = await (await fetch('diabetes_demo.csv')).text();
-  DEMO = parseCSV(txt);
-  DATA = DEMO;
-  updateMeta();
-}
-
-function parseCSV(txt){
-  const lines = txt.trim().split(/\r?\n/);
-  const head = lines[0].split(',').map(s=>s.trim());
+function parseCSV(txt) {
+  const lines = txt.trim().split(/\r?\n/); const head = lines[0].split(',').map(s => s.trim());
   const ai = head.indexOf('A'), yi = head.indexOf('Y');
-  if(ai<0||yi<0) throw new Error("CSV must contain columns A and Y");
-  const feats = head.filter((h,i)=>i!==ai&&i!==yi);
-  const fidx = feats.map(f=>head.indexOf(f));
-  const rows=[];
-  for(let i=1;i<lines.length;i++){
-    const c=lines[i].split(',');
-    if(c.length<head.length) continue;
-    const x=fidx.map(j=>parseFloat(c[j]));
-    if(x.some(v=>isNaN(v))) continue;
-    rows.push({x, A:+c[ai], Y:+c[yi]});
+  if (ai < 0 || yi < 0) throw new Error('CSV must contain columns A and Y');
+  const feats = head.filter((h, i) => i !== ai && i !== yi), fidx = feats.map(f => head.indexOf(f)); const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const c = lines[i].split(','); if (c.length < head.length) continue;
+    const x = fidx.map(j => parseFloat(c[j])); const A = +c[ai], Y = parseFloat(c[yi]);
+    if (x.some(isNaN) || isNaN(Y) || (A !== 0 && A !== 1)) continue; rows.push({ x, A, Y });
   }
-  return {feats, rows};
+  if (rows.length < 100) throw new Error('need at least 100 valid rows');
+  return { feats, rows };
 }
+async function loadDemo() { DEMO = parseCSV(await (await fetch('diabetes_demo.csv')).text()); DATA = DEMO; updateMeta(); }
 
-// standardize covariates
-function standardize(rows){
-  const p=rows[0].x.length, mean=Array(p).fill(0), sd=Array(p).fill(0);
-  rows.forEach(r=>r.x.forEach((v,j)=>mean[j]+=v));
-  mean.forEach((_,j)=>mean[j]/=rows.length);
-  rows.forEach(r=>r.x.forEach((v,j)=>sd[j]+=(v-mean[j])**2));
-  sd.forEach((_,j)=>sd[j]=Math.sqrt(sd[j]/rows.length)||1);
-  return rows.map(r=>({...r, z:r.x.map((v,j)=>(v-mean[j])/sd[j])}));
+function standardize(rows) {
+  const p = rows[0].x.length, mu = Array(p).fill(0), sd = Array(p).fill(0);
+  rows.forEach(r => r.x.forEach((v, j) => mu[j] += v)); mu.forEach((_, j) => mu[j] /= rows.length);
+  rows.forEach(r => r.x.forEach((v, j) => sd[j] += (v - mu[j]) ** 2)); sd.forEach((_, j) => sd[j] = Math.sqrt(sd[j] / rows.length) || 1);
+  return rows.map(r => ({ ...r, z: r.x.map((v, j) => (v - mu[j]) / sd[j]) }));
 }
-
-// tiny ridge logistic regression for propensity e(x)=P(A=1|x)
-function fitPropensity(rows){
-  const p=rows[0].z.length, w=Array(p+1).fill(0), lr=0.3, lam=1e-2, EP=300;
-  for(let it=0;it<EP;it++){
-    const g=Array(p+1).fill(0);
-    rows.forEach(r=>{
-      let s=w[p]; for(let j=0;j<p;j++) s+=w[j]*r.z[j];
-      const pr=1/(1+Math.exp(-s)), d=pr-r.A;
-      for(let j=0;j<p;j++) g[j]+=d*r.z[j]; g[p]+=d;
-    });
-    for(let j=0;j<p;j++) w[j]-=lr*(g[j]/rows.length+lam*w[j]);
-    w[p]-=lr*g[p]/rows.length;
+function fitPropensity(rows) {
+  const p = rows[0].z.length, w = Array(p + 1).fill(0);
+  for (let it = 0; it < 300; it++) {
+    const g = Array(p + 1).fill(0);
+    rows.forEach(r => { let s = w[p]; for (let j = 0; j < p; j++) s += w[j] * r.z[j];
+      const d = 1 / (1 + Math.exp(-s)) - r.A; for (let j = 0; j < p; j++) g[j] += d * r.z[j]; g[p] += d; });
+    for (let j = 0; j < p; j++) w[j] -= 0.3 * (g[j] / rows.length + 0.01 * w[j]); w[p] -= 0.3 * g[p] / rows.length;
   }
-  return r=>{let s=w[p];for(let j=0;j<r.z.length;j++)s+=w[j]*r.z[j];
-    return Math.min(0.97,Math.max(0.03,1/(1+Math.exp(-s))));};
+  return r => { let s = w[p]; for (let j = 0; j < r.z.length; j++) s += w[j] * r.z[j];
+    return Math.min(0.97, Math.max(0.03, 1 / (1 + Math.exp(-s)))); };
+}
+function fitKNN(rows, arm, K = 25) {
+  const tr = rows.filter(r => r.A === arm);
+  const Z = tr.map(r => r.z), Yv = tr.map(r => r.Y), m = tr.length, p = m ? Z[0].length : 0, k = Math.min(K, m);
+  return q => { const bd = new Float64Array(k).fill(Infinity), by = new Float64Array(k);
+    for (let i = 0; i < m; i++) { let d = 0; const zi = Z[i]; for (let j = 0; j < p; j++) { const t = zi[j] - q.z[j]; d += t * t; }
+      if (d < bd[k - 1]) { let j = k - 1; while (j > 0 && bd[j - 1] > d) { bd[j] = bd[j - 1]; by[j] = by[j - 1]; j--; } bd[j] = d; by[j] = Yv[i]; } }
+    let s = 0; for (let j = 0; j < k; j++) s += by[j]; return s / k; };
 }
 
-// kNN outcome regression mu_a(x) on one arm (simple, deterministic)
-function fitOutcome(rows, arm, K=25){
-  const tr=rows.filter(r=>r.A===arm);
-  return q=>{
-    const d=tr.map(r=>({y:r.Y, dist:dist2(r.z,q.z)}));
-    d.sort((a,b)=>a.dist-b.dist);
-    let s=0,n=Math.min(K,d.length); for(let i=0;i<n;i++)s+=d[i].y; return s/n;
-  };
+// arm a: calibration units with A=a; propensity for arm a is e (a=1) or 1-e (a=0)
+// Matched guarantee, as in the paper: the moment-constrained cutoff at level alpha uses
+// radius level d = DELTA*alpha/0.1 and cutoff level alpha - d, so both methods guarantee 1 - alpha.
+const DELTA = 0.001;
+function armCal(ca, e, mu, a, G, eps, alpha) {
+  const u = ca.filter(r => r.A === a);
+  const sc = u.map(r => Math.abs(r.Y - mu(r))), ps = u.map(r => a === 1 ? e(r) : 1 - e(r));
+  const d = DELTA * alpha / 0.1;
+  const epsv = eps === 'bern' ? radiusBernstein(ps, G, d) : Infinity;
+  const lev = eps === 'bern' ? alpha - d : alpha;
+  return { cal: new RobustCalibrator(sc, ps, G, epsv), eps: epsv, n: u.length, lev };
 }
-function dist2(a,b){let s=0;for(let i=0;i<a.length;i++)s+=(a[i]-b[i])**2;return s;}
-
-// ---------- LOOSE (box) cutoff — closed form, matches Python ----------
-function looseCut(scores, ps, G, al){
-  const idx=scores.map((s,i)=>i).sort((a,b)=>scores[a]-scores[b]);
-  const s=idx.map(i=>scores[i]), p=idx.map(i=>ps[i]), n=s.length;
-  const lo=p.map(v=>1+(1-v)/(v*G)), hi=p.map(v=>1+(1-v)*G/v);
-  const cum=[0]; for(let i=0;i<n;i++) cum.push(cum[i]+lo[i]);
-  const suf=Array(n+1).fill(0); for(let i=n-1;i>=0;i--) suf[i]=suf[i+1]+hi[i];
-  let c=-1;
-  for(let i=0;i<=n;i++){ const fr=suf[i]/(cum[i]+suf[i]+1e-12); if(fr<=al){c=i;break;} }
-  const qBox = c>=1 ? s[c-1] : Infinity;
-  // validity floor: standard conformal quantile (the box must be at least this wide)
-  const kFloor=Math.min(n-1, Math.ceil((1-al)*(n+1))-1);
-  const qFloor=s[Math.max(0,kFloor)];
-  return Math.max(qBox, qFloor);
+function setup() {
+  const rows = standardize(DATA.rows.slice()), n = rows.length, n1 = Math.floor(n * 0.5), n2 = Math.floor(n * 0.8);
+  const tr = rows.slice(0, n1), ca = rows.slice(n1, n2), te = rows.slice(n2);
+  const ef = fitPropensity(tr), k1 = fitKNN(tr, 1), k0 = fitKNN(tr, 0);
+  for (const r of ca.concat(te)) { r.pe = ef(r); r.p1 = k1(r); r.p0 = k0(r); }   // cache once
+  return { tr, ca, te, e: r => r.pe, mu1: r => r.p1, mu0: r => r.p0 };
 }
 
-// ---------- SHARP cutoff — tighter quantile that STAYS valid ----------
-// The sharp interval is tighter than the loose box but must remain valid (coverage
-// >= target). We tighten the loose cutoff by the documented LP gain, then guard it so
-// empirical coverage on calibration does not drop below the target. The exact LP
-// (scipy) in the reference Python is authoritative; this is a faithful browser proxy.
-function sharpCut(scores, ps, G, al, eps){
-  const qLoose=looseCut(scores, ps, G, al);
-  if(!isFinite(qLoose)) return qLoose;
-  const m=ps.reduce((a,b)=>a+b,0)/ps.length;
-  const v=ps.reduce((a,b)=>a+(b-m)**2,0)/ps.length;
-  const gGain=Math.min(0.10, 0.02*(G-1));
-  const hetGain=Math.min(0.03, 2*v);
-  const want=qLoose*(1-(gGain+hetGain));
-  // validity guard: do not tighten past the point where calibration coverage < target.
-  // find the smallest cutoff whose empirical (unweighted) coverage >= 1-al as a floor.
-  const sorted=scores.slice().sort((a,b)=>a-b), n=sorted.length;
-  const kFloor=Math.min(n-1, Math.ceil((1-al)*(n+1))-1);
-  const validFloor=sorted[Math.max(0,kFloor)];
-  return Math.max(want, validFloor);                   // tighter, but never invalid
-}
-
-// ---------- build intervals on a split ----------
-function analyze(G, al){
-  let rows=standardize(DATA.rows.slice());
-  // split: 40% train, 45% calibration (large => stable coverage), 15% test
-  const n=rows.length, n1=Math.floor(n*0.40), n2=Math.floor(n*0.85);
-  const tr=rows.slice(0,n1), ca=rows.slice(n1,n2), te=rows.slice(n2);
-  const e=fitPropensity(tr);
-  const mu1=fitOutcome(tr,1), mu0=fitOutcome(tr,0);
-  // calibration residuals for treated arm (factual)
-  const caT=ca.filter(r=>r.A===1);
-  const scoreT=caT.map(r=>Math.abs(r.Y-mu1(r)));
-  const psT=caT.map(r=>e(r));
-  const qLoose=looseCut(scoreT,psT,G,al);
-  const qSharp=sharpCut(scoreT,psT,G,al,0.05);
-  // test ITE point + interval (sharp half-width = qSharp on outcome scale)
-  const items=te.slice(0,40).map(r=>{
-    const tau=mu1(r)-mu0(r);
-    return {tau, lo:tau-qSharp, hi:tau+qSharp};
+function analyze(G, al) {
+  const S = setup(), { ca, te, e, mu1, mu0 } = S;
+  const c1 = armCal(ca, e, mu1, 1, G, 'bern', al / 2), c0 = armCal(ca, e, mu0, 0, G, 'bern', al / 2);
+  const items = te.slice(0, 40).map(r => {
+    const p = e(r), q1 = c1.cal.cutoff(c1.lev, boxBounds(p, G)[1]), q0 = c0.cal.cutoff(c0.lev, boxBounds(1 - p, G)[1]);
+    const tau = mu1(r) - mu0(r), half = q1 + q0; return { tau, lo: tau - half, hi: tau + half };
   });
-  // factual coverage check on treated test arm
-  const teT=te.filter(r=>r.A===1);
-  const covS=teT.filter(r=>Math.abs(r.Y-mu1(r))<=qSharp).length/Math.max(1,teT.length);
-  const covL=teT.filter(r=>Math.abs(r.Y-mu1(r))<=qLoose).length/Math.max(1,teT.length);
-  return {items, qLoose, qSharp, covS, covL, nTest:te.length, eTr:tr.map(e)};
+  const teT = te.filter(r => r.A === 1), cA = armCal(ca, e, mu1, 1, G, 'bern', al);
+  const q1a = teT.map(r => cA.cal.cutoff(cA.lev, boxBounds(e(r), G)[1]));
+  const cov = teT.filter((r, i) => Math.abs(r.Y - mu1(r)) <= q1a[i]).length / Math.max(1, teT.length);
+  return { S, items, cov, eps: cA.eps, n1: cA.n, nTest: teT.length };
 }
 
-/* =========================== RENDERING =========================== */
-const C=id=>document.getElementById(id);
-function dpi(cv){const r=cv.getBoundingClientRect();const d=window.devicePixelRatio||1;
-  cv.width=r.width*d;cv.height=cv.height*d;const x=cv.getContext('2d');x.scale(d,d);
-  return {x, W:r.width, H:cv.height/d};}
+function dpi(cv) { const r = cv.getBoundingClientRect(), d = window.devicePixelRatio || 1;
+  const h = +cv.getAttribute('height'); cv.width = r.width * d; cv.height = h * d; const x = cv.getContext('2d'); x.scale(d, d); return { x, W: r.width, H: h }; }
 
-function drawITE(res){
-  const cv=C('iteCanvas'), {x,W,H}=dpi(cv);
-  x.clearRect(0,0,W,H);
-  const items=res.items, n=items.length, padL=46,padR=20,padT=16,padB=28;
-  const allLo=Math.min(...items.map(i=>i.lo)), allHi=Math.max(...items.map(i=>i.hi));
-  const lo=Math.min(allLo,0)-0.05, hi=Math.max(allHi,0)+0.05;
-  const X=v=>padL+(W-padL-padR)*(v-lo)/(hi-lo);
-  const rowH=(H-padT-padB)/n;
-  // zero line
-  x.strokeStyle='#5b8fc9';x.lineWidth=1.5;x.setLineDash([4,4]);
-  x.beginPath();x.moveTo(X(0),padT);x.lineTo(X(0),H-padB);x.stroke();x.setLineDash([]);
-  // axis labels
-  x.fillStyle='#8a97a6';x.font='11px "Spline Sans Mono"';x.textAlign='center';
-  for(let t=0;t<=4;t++){const v=lo+(hi-lo)*t/4;x.fillText(v.toFixed(2),X(v),H-10);}
-  // bars
-  items.forEach((it,i)=>{
-    const y=padT+rowH*i+rowH/2;
-    const crosses=it.lo<0&&it.hi>0;
-    x.strokeStyle=crosses?'#6b7886':'#3fb59b';x.lineWidth=Math.min(7,rowH*0.5);
-    x.lineCap='round';
-    x.beginPath();x.moveTo(X(it.lo),y);x.lineTo(X(it.hi),y);x.stroke();
-    x.fillStyle='#f4f1ea';x.beginPath();x.arc(X(it.tau),y,3,0,7);x.fill();
+function drawITE(res) {
+  const { x, W, H } = dpi(C('iteCanvas')); x.clearRect(0, 0, W, H);
+  const it = res.items.filter(i => isFinite(i.lo) && isFinite(i.hi)), n = it.length;
+  if (!n) { x.fillStyle = '#8a97a6'; x.font = '13px "Spline Sans Mono"'; x.fillText('All intervals are infinite at this Γ/α (too few calibration units).', 20, 40); return; }
+  const padL = 46, padR = 20, padT = 16, padB = 28;
+  const lo = Math.min(...it.map(i => i.lo), 0) - 0.05, hi = Math.max(...it.map(i => i.hi), 0) + 0.05;
+  const X = v => padL + (W - padL - padR) * (v - lo) / (hi - lo), rowH = (H - padT - padB) / n;
+  x.strokeStyle = '#5b8fc9'; x.lineWidth = 1.5; x.setLineDash([4, 4]); x.beginPath(); x.moveTo(X(0), padT); x.lineTo(X(0), H - padB); x.stroke(); x.setLineDash([]);
+  x.fillStyle = '#8a97a6'; x.font = '11px "Spline Sans Mono"'; x.textAlign = 'center';
+  for (let t = 0; t <= 4; t++) { const v = lo + (hi - lo) * t / 4; x.fillText(v.toFixed(2), X(v), H - 10); }
+  it.forEach((d, i) => { const y = padT + rowH * i + rowH / 2, crosses = d.lo < 0 && d.hi > 0;
+    x.strokeStyle = crosses ? '#6b7886' : '#3fb59b'; x.lineWidth = Math.min(7, rowH * 0.5); x.lineCap = 'round';
+    x.beginPath(); x.moveTo(X(d.lo), y); x.lineTo(X(d.hi), y); x.stroke();
+    x.fillStyle = '#f4f1ea'; x.beginPath(); x.arc(X(d.tau), y, 3, 0, 7); x.fill(); });
+}
+
+function drawBand(res, al) {
+  const { ca, te, e, mu1 } = res.S, teT = te.filter(r => r.A === 1), Gs = [1, 1.5, 2, 3, 4, 5, 6, 8];
+  const data = Gs.map(g => {
+    const mc = armCal(ca, e, mu1, 1, g, 'bern', al), bx = armCal(ca, e, mu1, 1, g, 'box', al);
+    const qm = teT.map(r => mc.cal.cutoff(mc.lev, boxBounds(e(r), g)[1])), qb = teT.map(r => bx.cal.cutoff(bx.lev, boxBounds(e(r), g)[1]));
+    const fin = qm.every(isFinite) && qb.every(isFinite);
+    const wm = fin ? 2 * qm.reduce((a, b) => a + b, 0) / qm.length : NaN, wb = fin ? 2 * qb.reduce((a, b) => a + b, 0) / qb.length : NaN;
+    const cov = teT.filter((r, i) => Math.abs(r.Y - mu1(r)) <= qm[i]).length / Math.max(1, teT.length);
+    return { g, wm, wb, cov, eps: mc.eps };
   });
+  const { x, W, H } = dpi(C('bandCanvas')); x.clearRect(0, 0, W, H);
+  const padL = 48, padR = 52, padT = 18, padB = 34, ok = data.filter(d => isFinite(d.wb));
+  const wMax = (Math.max(...ok.map(d => d.wb), 1)) * 1.1, Xp = g => padL + (W - padL - padR) * (g - 1) / 7;
+  const Yw = w => padT + (H - padT - padB) * (1 - w / wMax), Yc = c => padT + (H - padT - padB) * (1 - (c - 0.5) / 0.5);
+  x.strokeStyle = '#27323f'; x.lineWidth = 1; x.font = '10px "Spline Sans Mono"';
+  for (let t = 0; t <= 4; t++) { const yy = padT + (H - padT - padB) * t / 4; x.beginPath(); x.moveTo(padL, yy); x.lineTo(W - padR, yy); x.stroke();
+    x.fillStyle = '#8a97a6'; x.textAlign = 'right'; x.fillText((wMax * (1 - t / 4)).toFixed(2), padL - 6, yy + 3);
+    x.fillStyle = '#5b8fc9'; x.textAlign = 'left'; x.fillText((1 - 0.5 * t / 4).toFixed(2), W - padR + 6, yy + 3); }
+  x.textAlign = 'center'; x.fillStyle = '#8a97a6'; data.forEach(d => x.fillText('Γ=' + d.g, Xp(d.g), H - 12));
+  const line = (key, col, Y, dash) => { x.strokeStyle = col; x.lineWidth = 2.5; x.setLineDash(dash || []); x.beginPath();
+    ok.forEach((d, i) => { const xx = Xp(d.g), yy = Y(d[key]); i ? x.lineTo(xx, yy) : x.moveTo(xx, yy); }); x.stroke(); x.setLineDash([]);
+    ok.forEach(d => { x.fillStyle = col; x.beginPath(); x.arc(Xp(d.g), Y(d[key]), 3.5, 0, 7); x.fill(); }); };
+  line('wb', '#d9a94e', Yw); line('wm', '#3fb59b', Yw); line('cov', '#5b8fc9', Yc, [5, 3]);
+  x.strokeStyle = '#6b7886'; x.setLineDash([2, 4]); x.beginPath(); x.moveTo(padL, Yc(1 - al)); x.lineTo(W - padR, Yc(1 - al)); x.stroke(); x.setLineDash([]);
+  C('bandTable').innerHTML = '<tr><th>Γ</th><th>Moment-constrained width</th><th>Box width</th><th>Narrower</th><th>ε (Bernstein)</th><th>Factual coverage</th></tr>' +
+    data.map(d => `<tr><td>${d.g}</td><td>${isFinite(d.wm) ? d.wm.toFixed(3) : '∞'}</td><td>${isFinite(d.wb) ? d.wb.toFixed(3) : '∞'}</td>
+      <td style="color:var(--accent2)">${isFinite(d.wb) && d.wb > 0 ? (100 * (1 - d.wm / d.wb)).toFixed(1) + '%' : '–'}</td><td>${d.eps.toFixed(3)}</td><td>${d.cov.toFixed(3)}</td></tr>`).join('');
 }
 
-function drawBand(res, G, al){
-  const cv=C('bandCanvas'), {x,W,H}=dpi(cv);
-  x.clearRect(0,0,W,H);
-  const Gs=[1,2,3,4,5,6,7,8], padL=48,padR=48,padT=18,padB=34;
-  // compute width/coverage per G (sharp & loose) using same split
-  const rows=standardize(DATA.rows.slice());
-  const n=rows.length,n1=Math.floor(n*.40),n2=Math.floor(n*.85);
-  const tr=rows.slice(0,n1),ca=rows.slice(n1,n2),te=rows.slice(n2);
-  const e=fitPropensity(tr),mu1=fitOutcome(tr,1);
-  const caT=ca.filter(r=>r.A===1),teT=te.filter(r=>r.A===1);
-  const sc=caT.map(r=>Math.abs(r.Y-mu1(r))),ps=caT.map(r=>e(r));
-  const data=Gs.map(g=>{
-    const qs=sharpCut(sc,ps,g,al,0.05),ql=looseCut(sc,ps,g,al);
-    const cov=teT.filter(r=>Math.abs(r.Y-mu1(r))<=qs).length/Math.max(1,teT.length);
-    return {g,ws:2*qs,wl:2*ql,cov};
+const OCOL = { fixed: '#8a97a6', aci: '#e0533d', aci_g1: '#d9a94e', aci_clip: '#3fb59b' };
+const ONAME = { fixed: 'Fixed level', aci: 'Unclipped ACI', aci_clip: 'Clipped ACI (paper)', aci_g1: 'Standard ACI, Γ=1' };
+let SCN = 'none';
+function drawOnline() {
+  const sc = ONLINE_RESULTS[SCN];
+  [['onlineF', 'factual', 'factual coverage (rolling 400)'], ['onlineC', 'counterfactual', 'counterfactual coverage (rolling 400)']].forEach(([id, key, ttl]) => {
+    const { x, W, H } = dpi(C(id)); x.clearRect(0, 0, W, H);
+    const padL = 44, padR = 12, padT = 20, padB = 24, lo = 0.65, hi = 1.0, T = 6000;
+    const Xp = t => padL + (W - padL - padR) * t / T, Yp = v => padT + (H - padT - padB) * (1 - (v - lo) / (hi - lo));
+    x.font = '10px "Spline Sans Mono"';
+    for (let t = 0; t <= 7; t++) { const v = lo + (hi - lo) * t / 7, yy = Yp(v); x.strokeStyle = '#27323f'; x.beginPath(); x.moveTo(padL, yy); x.lineTo(W - padR, yy); x.stroke();
+      x.fillStyle = '#8a97a6'; x.textAlign = 'right'; x.fillText(v.toFixed(2), padL - 6, yy + 3); }
+    x.strokeStyle = '#6b7886'; x.setLineDash([3, 4]); x.beginPath(); x.moveTo(padL, Yp(0.9)); x.lineTo(W - padR, Yp(0.9)); x.stroke(); x.setLineDash([]);
+    if (SCN !== 'none') { x.strokeStyle = '#d9a94e'; x.beginPath(); x.moveTo(Xp(3000), padT); x.lineTo(Xp(3000), H - padB); x.stroke(); }
+    x.fillStyle = '#c9d2dc'; x.textAlign = 'left'; x.fillText(ttl, padL, 12);
+    ['fixed', 'aci', 'aci_g1', 'aci_clip'].forEach(k => { const pts = sc.designs[k][key]; x.strokeStyle = OCOL[k]; x.lineWidth = 2; x.beginPath();
+      pts.forEach(([t, v], i) => i ? x.lineTo(Xp(t), Yp(Math.max(lo, v))) : x.moveTo(Xp(t), Yp(Math.max(lo, v)))); x.stroke(); });
   });
-  const wMax=Math.max(...data.map(d=>d.wl))*1.1||1;
-  const Xp=g=>padL+(W-padL-padR)*(g-1)/7;
-  const Yw=w=>padT+(H-padT-padB)*(1-w/wMax);
-  const Yc=c=>padT+(H-padT-padB)*(1-(c-0.5)/0.5); // coverage axis 0.5..1
-  // grid
-  x.strokeStyle='#27323f';x.lineWidth=1;x.font='10px "Spline Sans Mono"';
-  x.fillStyle='#8a97a6';x.textAlign='right';
-  for(let t=0;t<=4;t++){const yy=padT+(H-padT-padB)*t/4;
-    x.beginPath();x.moveTo(padL,yy);x.lineTo(W-padR,yy);x.stroke();
-    x.fillText((wMax*(1-t/4)).toFixed(1),padL-6,yy+3);}
-  x.textAlign='left';x.fillStyle='#5b8fc9';
-  for(let t=0;t<=4;t++){const yy=padT+(H-padT-padB)*t/4;
-    x.fillText((1-0.5*t/4).toFixed(2),W-padR+6,yy+3);}
-  x.textAlign='center';x.fillStyle='#8a97a6';
-  data.forEach(d=>x.fillText('Γ='+d.g,Xp(d.g),H-12));
-  // width lines
-  const line=(key,col)=>{x.strokeStyle=col;x.lineWidth=2.5;x.beginPath();
-    data.forEach((d,i)=>{const xx=Xp(d.g),yy=Yw(d[key]);i?x.lineTo(xx,yy):x.moveTo(xx,yy);});x.stroke();
-    data.forEach(d=>{x.fillStyle=col;x.beginPath();x.arc(Xp(d.g),Yw(d[key]),3.5,0,7);x.fill();});};
-  line('wl','#d9a94e'); line('ws','#3fb59b');
-  // coverage
-  x.strokeStyle='#5b8fc9';x.lineWidth=2;x.setLineDash([5,3]);x.beginPath();
-  data.forEach((d,i)=>{const xx=Xp(d.g),yy=Yc(d.cov);i?x.lineTo(xx,yy):x.moveTo(xx,yy);});x.stroke();x.setLineDash([]);
-  // target coverage line
-  x.strokeStyle='#6b7886';x.setLineDash([2,4]);x.beginPath();
-  x.moveTo(padL,Yc(1-al));x.lineTo(W-padR,Yc(1-al));x.stroke();x.setLineDash([]);
-  // table
-  const tb=C('bandTable');
-  tb.innerHTML='<tr><th>Γ</th><th>Sharp width</th><th>Loose width</th><th>Tighter</th><th>Coverage</th></tr>'+
-    data.filter(d=>[1,3,5,8].includes(d.g)).map(d=>{
-      const tighter=Math.round(100*(1-d.ws/d.wl));
-      return `<tr><td>${d.g}</td><td>${d.ws.toFixed(2)}</td><td>${d.wl.toFixed(2)}</td>
-        <td style="color:var(--accent2)">${tighter}%</td><td>${d.cov.toFixed(3)}</td></tr>`;
-    }).join('');
+  C('onlineStats').innerHTML = ['fixed', 'aci', 'aci_g1', 'aci_clip'].map(k => { const s = ONLINE_RESULTS[SCN].designs[k].summary;
+    return `<div class="stat"><div class="k">${ONAME[k]}</div><div class="v" style="font-size:16px;color:${OCOL[k]}">factual ${s.fact_cov.toFixed(3)}<br>counterf. ${s.cf_cov.toFixed(3)}${SCN !== 'none' ? '<br>steps 3000–4499 ' + s.cf_cov_trans.toFixed(3) : ''}</div></div>`; }).join('');
+}
+function scnButtons() {
+  C('scnBtns').innerHTML = Object.entries(ONLINE_RESULTS).map(([k, v]) => `<button data-s="${k}" class="${k === SCN ? 'on' : ''}">${v.label}</button>`).join('');
+  C('scnBtns').querySelectorAll('button').forEach(b => b.onclick = () => { SCN = b.dataset.s; scnButtons(); drawOnline(); });
 }
 
-function drawOnline(res, al){
-  const cv=C('onlineCanvas'), {x,W,H}=dpi(cv);
-  x.clearRect(0,0,W,H);
-  // simulate a rolling coverage stream with an injected mid-stream shift
-  const T=600, target=1-al, padL=44,padR=16,padT=16,padB=30;
-  let af=target, aa=target;            // fixed vs adaptive level (as coverage)
-  const fixed=[],adapt=[]; let rngS=12345;
-  const rand=()=>{rngS=(rngS*1103515245+12345)&0x7fffffff;return rngS/0x7fffffff;};
-  let covF=target,covA=target;
-  for(let t=0;t<T;t++){
-    const drift = t>T*0.45 ? 0.12*Math.sin((t-T*0.45)/40) - (t>T*0.45?0.06:0) : 0;
-    // fixed: coverage wanders with drift
-    covF += 0.04*((target+drift)-covF) + (rand()-0.5)*0.02;
-    // adaptive: pulls back to target
-    covA += 0.10*(target-covA) + (rand()-0.5)*0.02 + 0.04*drift*(1-Math.min(1,(t-T*0.45)/120>0?(t-T*0.45)/120:0));
-    covA += 0.12*(target-covA);
-    fixed.push(Math.max(0.6,Math.min(1,covF)));
-    adapt.push(Math.max(0.6,Math.min(1,covA)));
-  }
-  const lo=0.6,hi=1.0;
-  const Xp=t=>padL+(W-padL-padR)*t/(T-1);
-  const Yp=v=>padT+(H-padT-padB)*(1-(v-lo)/(hi-lo));
-  x.strokeStyle='#27323f';x.font='10px "Spline Sans Mono"';x.fillStyle='#8a97a6';x.textAlign='right';
-  for(let t=0;t<=4;t++){const v=lo+(hi-lo)*t/4,yy=Yp(v);
-    x.beginPath();x.moveTo(padL,yy);x.lineTo(W-padR,yy);x.stroke();x.fillText(v.toFixed(2),padL-6,yy+3);}
-  // drift marker
-  x.strokeStyle='#d9a94e';x.setLineDash([4,4]);x.beginPath();
-  x.moveTo(Xp(T*0.45),padT);x.lineTo(Xp(T*0.45),H-padB);x.stroke();x.setLineDash([]);
-  x.fillStyle='#d9a94e';x.textAlign='center';x.fillText('drift onset',Xp(T*0.45),padT-2);
-  // target
-  x.strokeStyle='#6b7886';x.setLineDash([2,4]);x.beginPath();
-  x.moveTo(padL,Yp(target));x.lineTo(W-padR,Yp(target));x.stroke();x.setLineDash([]);
-  const plot=(arr,col)=>{x.strokeStyle=col;x.lineWidth=2;x.beginPath();
-    arr.forEach((v,t)=>{const xx=Xp(t),yy=Yp(v);t?x.lineTo(xx,yy):x.moveTo(xx,yy);});x.stroke();};
-  plot(fixed,'#e0533d'); plot(adapt,'#3fb59b');
-  // stats
-  const fAvg=fixed.slice(-150).reduce((a,b)=>a+b)/150, aAvg=adapt.slice(-150).reduce((a,b)=>a+b)/150;
-  C('onlineStats').innerHTML=
-    statBox('Target',target.toFixed(2),'')+
-    statBox('Adaptive α_t (late)',aAvg.toFixed(3),Math.abs(aAvg-target)<0.02?'':'warn')+
-    statBox('Fixed α (late)',fAvg.toFixed(3),Math.abs(fAvg-target)>0.03?'bad':'warn');
+function statBox(k, v, cls) { return `<div class="stat"><div class="k">${k}</div><div class="v ${cls || ''}">${v}</div></div>`; }
+function updateMeta() {
+  const n = DATA.rows.length, tr = DATA.rows.filter(r => r.A === 1).length;
+  C('meta').innerHTML = `<b>${n}</b> rows · <b>${DATA.feats.length}</b> covariates<br>treated: <b>${(100 * tr / n).toFixed(0)}%</b><br><span style="color:#6b7886">${DATA.feats.slice(0, 4).join(', ')}…</span>`;
 }
-
-function statBox(k,v,cls){return `<div class="stat"><div class="k">${k}</div><div class="v ${cls}">${v}</div></div>`;}
-
-/* =========================== APP WIRING =========================== */
-let lastRes=null;
-function updateMeta(){
-  if(!DATA){C('meta').innerHTML='no data';return;}
-  const n=DATA.rows.length, tr=DATA.rows.filter(r=>r.A===1).length;
-  const ev=DATA.rows.filter(r=>r.Y===1).length;
-  C('meta').innerHTML=`<b>${n}</b> rows &nbsp;·&nbsp; <b>${DATA.feats.length}</b> covariates<br>`+
-    `treated: <b>${(tr/n*100).toFixed(0)}%</b> &nbsp;·&nbsp; event: <b>${(ev/n*100).toFixed(0)}%</b><br>`+
-    `<span style="color:#6b7886">${DATA.feats.slice(0,4).join(', ')}…</span>`;
+function run() {
+  if (!DATA) return; const G = +C('gamma').value, al = +C('alpha').value, btn = C('runBtn');
+  btn.innerHTML = '<span class="spin"></span>computing…';
+  setTimeout(() => {
+    LAST = analyze(G, al); drawITE(LAST); drawBand(LAST, al);
+    const cross = LAST.items.filter(i => i.lo < 0 && i.hi > 0).length;
+    C('iteStats').innerHTML = statBox('Treated calibration units', LAST.n1) + statBox('Bernstein radius ε', LAST.eps.toFixed(3)) +
+      statBox('Arm-1 factual coverage', LAST.cov.toFixed(3), LAST.cov >= 1 - al - 0.03 ? '' : 'warn') + statBox('Intervals containing 0', cross + ' / ' + LAST.items.length);
+    btn.innerHTML = '▶ Run analysis';
+  }, 60);
 }
-
-function run(){
-  if(!DATA){return;}
-  const G=parseFloat(C('gamma').value), al=parseFloat(C('alpha').value);
-  const btn=C('runBtn'); btn.innerHTML='<span class="spin"></span>computing…';
-  setTimeout(()=>{
-    lastRes=analyze(G,al);
-    drawITE(lastRes);
-    drawBand(lastRes,G,al);
-    drawOnline(lastRes,al);
-    // ITE stats
-    const it=lastRes;
-    const cross=it.items.filter(i=>i.lo<0&&i.hi>0).length;
-    C('iteStats').innerHTML=
-      statBox('Sharp half-width',it.qSharp.toFixed(3),'')+
-      statBox('Factual coverage',it.covS.toFixed(3),it.covS>=1-al-0.03?'':'warn')+
-      statBox('vs loose width',Math.round(100*(1-it.qSharp/it.qLoose))+'% tighter','')+
-      statBox('Sign-uncertain',cross+' / '+it.items.length,cross>it.items.length/2?'warn':'');
-    btn.innerHTML='▶ Run analysis';
-  },120);
-}
-
-// tabs
-document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
-  document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('on'));
-  document.querySelectorAll('.panel').forEach(x=>x.classList.remove('on'));
-  b.classList.add('on'); C('tab-'+b.dataset.tab).classList.add('on');
-  if(lastRes){drawITE(lastRes);drawBand(lastRes,parseFloat(C('gamma').value),parseFloat(C('alpha').value));
-    drawOnline(lastRes,parseFloat(C('alpha').value));}
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.tabs button').forEach(x => x.classList.remove('on')); document.querySelectorAll('.panel').forEach(x => x.classList.remove('on'));
+  b.classList.add('on'); C('tab-' + b.dataset.tab).classList.add('on');
+  if (b.dataset.tab === 'online') drawOnline(); else if (LAST) { drawITE(LAST); drawBand(LAST, +C('alpha').value); }
 });
-// sliders
-C('gamma').oninput=e=>C('gVal').textContent=parseFloat(e.target.value).toFixed(1);
-C('alpha').oninput=e=>C('aVal').textContent=parseFloat(e.target.value).toFixed(2);
-// data source toggle
-C('srcDemo').onclick=()=>{C('srcDemo').classList.add('on');C('srcUpload').classList.remove('on');
-  C('fileRow').style.display='none';DATA=DEMO;updateMeta();};
-C('srcUpload').onclick=()=>{C('srcUpload').classList.add('on');C('srcDemo').classList.remove('on');
-  C('fileRow').style.display='block';};
-C('csvFile').onchange=ev=>{const f=ev.target.files[0];if(!f)return;
-  const rd=new FileReader();rd.onload=()=>{try{DATA=parseCSV(rd.result);updateMeta();
-    C('meta').innerHTML+='<br><span style="color:#3fb59b">✓ '+f.name+' loaded</span>';
-  }catch(e){C('meta').innerHTML='<span style="color:#e0533d">✗ '+e.message+'</span>';}};
-  rd.readAsText(f);};
-C('runBtn').onclick=run;
-C('aboutLink').onclick=e=>{e.preventDefault();alert(
-  'Method summary:\n\n'+
-  '• MSM weight box: w_lo, w_hi from propensity ps and sensitivity Γ.\n'+
-  '• Loose interval: closed-form box cutoff.\n'+
-  '• Sharp interval: exact worst-case mass (LP / Charnes–Cooper), 6–10% tighter.\n'+
-  '• Online: α_t adapts on factual coverage under drift.\n\n'+
-  'Coverage shown is FACTUAL (observable). True ITE coverage is only measurable semi-synthetically.'
-);};
-
-// boot
-loadDemo().then(()=>{ setTimeout(run,200); }).catch(e=>{C('meta').innerHTML='<span style="color:#e0533d">demo load failed: '+e.message+'</span>';});
+C('gamma').oninput = e => C('gVal').textContent = (+e.target.value).toFixed(1);
+C('alpha').oninput = e => C('aVal').textContent = (+e.target.value).toFixed(2);
+C('srcDemo').onclick = () => { C('srcDemo').classList.add('on'); C('srcUpload').classList.remove('on'); C('fileRow').style.display = 'none'; DATA = DEMO; updateMeta(); };
+C('srcUpload').onclick = () => { C('srcUpload').classList.add('on'); C('srcDemo').classList.remove('on'); C('fileRow').style.display = 'block'; };
+C('csvFile').onchange = ev => { const f = ev.target.files[0]; if (!f) return; const rd = new FileReader();
+  rd.onload = () => { try { DATA = parseCSV(rd.result); updateMeta(); C('meta').innerHTML += '<br><span style="color:#3fb59b">✓ ' + f.name + '</span>'; }
+    catch (e) { C('meta').innerHTML = '<span style="color:#e0533d">✗ ' + e.message + '</span>'; } }; rd.readAsText(f); };
+C('runBtn').onclick = run;
+scnButtons();
+loadDemo().then(() => setTimeout(run, 150)).catch(e => C('meta').innerHTML = '<span style="color:#e0533d">demo load failed: ' + e.message + '</span>');
 </script>
 </body>
 </html>
